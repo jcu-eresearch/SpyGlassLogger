@@ -9,7 +9,6 @@ pushd $lib_dir
 
 git clone https://github.com/Tecsmith/DS3232RTC.git
 git clone https://github.com/milesburton/Arduino-Temperature-Control-Library.git
-git clone https://github.com/nigelb/Arduino-DS2762.git
 git clone https://github.com/PaulStoffregen/Time.git
 
 rm .onewire.zip
