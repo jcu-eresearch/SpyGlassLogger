@@ -16,15 +16,19 @@
 #ifndef _DROLoggerBoard_H_
 #define _DROLoggerBoard_H_
 
-#define ONE_WIRE_BUS_ONE_PIN 7
-#define POWER_CONTROL_PIN    A3
-#define POWERBEE_CONTROL_PIN  5
 #define DEBUG_RX_PIN 8
 #define DEBUG_TX_PIN 9
+#define ONE_WIRE_BUS_ONE_PIN 7
+//#define ONE_WIRE_BUS_TWO_PIN 6
+#define POWERBEE_CONTROL_PIN  5
+#define POWER_CONTROL_PIN     4
+#define CLOCK_INT_PIN         2
+
 
 #define HUMIDITY_PIN A0
-#define AMBIENT_LIGHT_PIN A1
-#define SOUND_SENSOR A2
+#define AMBIENT_LIGHT_PIN_LOW A1
+#define AMBIENT_LIGHT_PIN_HIGH A2
+#define SOUND_SENSOR A3
 
 
 #endif

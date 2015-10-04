@@ -54,7 +54,7 @@ void setup()
 	debug->println(sizeof(record_t));
 	debug->print("Logger function count: ");
 	debug->println(sizeof(loggers)/2);
-	Serial.setTimeout(5000);
+	data->setTimeout(ACK_TIMEOUT);
 
 
 	PORTD |= 0x04;
@@ -190,21 +190,21 @@ bool do_logging(int repeat_count)
 		debug->println(i);
 		log_bus(i);
 	}
-	for(int i = 0; i < (sizeof(loggers)/2); i++)
+	for(size_t i = 0; i < (sizeof(loggers)/2); i++)
 	{
 		loggers[i]();
 	}
 
 	debug->print("Temperature Count: ");
 	debug->println(upload.temperature_count);
-	debug->print("Humidity Count: ");
-	debug->println(upload.humidity_count);
+//	debug->print("Humidity Count: ");
+//	debug->println(upload.humidity_count);
 	debug->println();
 
 	data->write((uint8_t*)&end_delim, sizeof(record_t));
 	debug->println(freeRam());
 
-	if(data->find(ACK))
+	if(find_ack())
 	{
 		debug->println("ACK received.");
 		return true;
@@ -284,10 +284,10 @@ void log_ambient_light()
 	record_t ambient_light;
 	memset(ambient_light.address, 0, 8);
 	ambient_light.record_type = RECORD_ADC;
-	ambient_light.address[0] = AMBIENT_LIGHT_PIN;
+	ambient_light.address[0] = AMBIENT_LIGHT_PIN_LOW;
 
-	pinMode(AMBIENT_LIGHT_PIN, INPUT);
-	ambient_light.value = analogRead(AMBIENT_LIGHT_PIN);
+	pinMode(AMBIENT_LIGHT_PIN_LOW, INPUT);
+	ambient_light.value = analogRead(AMBIENT_LIGHT_PIN_LOW);
 	data->write((uint8_t*)&ambient_light, sizeof(record_t));
 }
 
@@ -362,4 +362,52 @@ void displayDate(tmElements_t &time, Stream* displayOn)
     displayOn->print(colan);
     LEADING_ZERO(displayOn, time.Second);
     displayOn->print(time.Second, DEC);
+}
+
+
+bool find_ack()
+{
+	CircularBuffer ack_buf(sizeof(ack_t), debug);
+	unsigned long start = millis();
+	ack_t ack;
+
+
+	while(((millis() - start) < ACK_TIMEOUT))
+	{
+		int val = data->read();
+		if(val >= 0)
+		{
+			ack_buf.insert(val);
+			if(ack_buf.endsWith(ACK, strlen(ACK)))
+			{
+
+				uint8_t *buf = (uint8_t*)&ack;
+				for(size_t i = 0; i < sizeof(ack_t); i++)
+				{
+					buf[i] = ack_buf[i];
+				}
+
+				if(ack.magic_number == 0xBEEF)
+				{
+					handle_ack(&ack);
+				}
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void handle_ack(ack_t* response)
+{
+	switch(response->command)
+	{
+	case 0xC10C:
+		RTC.set((time_t)response->value);
+		break;
+	default:
+		debug->println("Unknown ACK type");
+	}
 }

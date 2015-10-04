@@ -23,6 +23,8 @@
 #include "DallasTemperature.h"
 #include "SoftwareSerial.h"
 
+#include "CircularBuffer.h"
+
 #include "SpyGlassLoggerBoard.h"
 
 #include <avr/sleep.h>
@@ -33,10 +35,11 @@
 #define ONEWIRE_BUS_COUNT 1
 #define MAX_RETRIES 5
 #define ACK "OK"
-#define LOG_INTERVAL 600
-#define LOG_INTERVAL_THRESHOLD 10
+#define LOG_INTERVAL 15
+#define LOG_INTERVAL_THRESHOLD 1
 #define NODE_ID 2
-#define COLLISION_AVOID_INTERVAL (NODE_ID * 60)
+#define COLLISION_AVOID_INTERVAL (NODE_ID * 3)
+#define ACK_TIMEOUT 5000
 
 
 
@@ -59,28 +62,29 @@
 #endif
 
 
-bool do_logging(int repeat_count);
 
-void log_bus(uint8_t bus);
-void log_temperature(uint8_t bus, uint8_t *address);
-void log_address(Stream* stream, uint8_t *address);
 void backup_sleep();
 void power_up_devices();
 void power_down_devices();
 void power_down_radio();
-void clear_input();
 void power_up_radio();
 void INT0_ISR();
 time_t wake_up_at(time_t current_time, tmElements_t &alarm);
 
-bool repeat(bool (*func)(int repeat_count), uint32_t count, uint32_t delayms);
+void clear_input();
 int freeRam();
 void displayDate(time_t time, Stream* displayOn);
 void displayDate(tmElements_t &time, Stream* displayOn);
+bool find_ack();
 
+bool do_logging(int repeat_count);
+void log_bus(uint8_t bus);
+void log_temperature(uint8_t bus, uint8_t *address);
+void log_address(Stream* stream, uint8_t *address);
 void log_humidity();
 void log_ambient_light();
 void log_sound();
+bool repeat(bool (*func)(int repeat_count), uint32_t count, uint32_t delayms);
 
 void (*loggers[])(void) = {
 		log_humidity,
@@ -116,13 +120,22 @@ enum record_types_e
 	RECORD_ADC = 2,
 };
 
-
+struct ack_t
+{
+	uint32_t magic_number;
+	uint32_t command;
+	uint32_t value;
+	char ack[sizeof(ACK) -1];
+};
 
 struct upload_t
 {
 	uint16_t temperature_count;
 	uint16_t humidity_count;
 };
+
+
+void handle_ack(ack_t* response);
 
 #ifdef __cplusplus
 extern "C" {
