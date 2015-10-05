@@ -304,6 +304,50 @@ void log_sound()
 	data->write((uint8_t*)&sound, sizeof(record_t));
 }
 
+void log_battery_voltage()
+{
+	debug->println("Logging Battery Voltage");
+	pinMode(BATERY_VOLTAGE, INPUT);
+
+	record_t battery;
+	memset(battery.address, 0, 8);
+	battery.record_type = RECORD_ADC;
+	battery.address[0] = BATERY_VOLTAGE;
+	battery.value = analogRead(BATERY_VOLTAGE) * (1.1 / 1024)* (10+2)/2;
+	data->write((uint8_t*)&battery, sizeof(record_t));
+}
+
+void log_charge_status()
+{
+	debug->println("Logging Charge Status");
+	pinMode(CHARGE_STATUS, INPUT);
+
+	record_t charge;
+	memset(charge.address, 0, 8);
+	charge.record_type = RECORD_ADC;
+	charge.address[0] = CHARGE_STATUS;
+	uint16_t val = analogRead(CHARGE_STATUS);
+
+	if(val>900)
+	  {
+		charge.value = 0;//sleeping
+	  }
+	  else if(val>550)
+	  {
+		  charge.value = 1;//charging
+	  }
+	  else if(val>350)
+	  {
+		  charge.value = 2;//done
+	  }
+	  else
+	  {
+		  charge.value = 3;//error
+	  }
+
+	data->write((uint8_t*)&charge, sizeof(record_t));
+}
+
 void log_address(Stream* stream, uint8_t *address)
 {
 	for(int i = 0; i < 8; i++)

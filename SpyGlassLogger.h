@@ -84,12 +84,16 @@ void log_address(Stream* stream, uint8_t *address);
 void log_humidity();
 void log_ambient_light();
 void log_sound();
+void log_battery_voltage();
+void log_charge_status();
 bool repeat(bool (*func)(int repeat_count), uint32_t count, uint32_t delayms);
 
 void (*loggers[])(void) = {
 		log_humidity,
 		log_ambient_light,
-		log_sound
+		log_sound,
+		log_battery_voltage,
+		log_charge_status
 };
 
 
