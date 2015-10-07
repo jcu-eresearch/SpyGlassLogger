@@ -298,12 +298,12 @@ void log_humidity()
 	humidity.value = analogRead(HUMIDITY_PIN);
 	debug->print("\tADC: ");
 	debug->println(humidity.value);
-	double voltage = (double(humidity.value) / 1024) * HUMIDITY_REFERENCE_VOLTAGE;
+	double voltage = (double(humidity.value) / 1024) * ADC_REFERENCE_VOLTAGE;
 	debug->print("\tVoltage: ");
 	debug->println(voltage);
 	if(temperature != NAN)
 	{
-		double sensorRH = ((voltage/HUMIDITY_REFERENCE_VOLTAGE) - 0.1515)/0.00636;
+		double sensorRH = ((voltage/ADC_REFERENCE_VOLTAGE) - 0.1515)/0.00636;
 		debug->print("\tSensor RH: ");
 		debug->println(sensorRH);
 		humidity.value = sensorRH/(1.0546 - (0.00216 * temperature));
@@ -331,10 +331,13 @@ void log_ambient_light()
 	debug->print("\t");
 	debug->println(ambient_light.value);
 
+	ambient_light.address[0] = AMBIENT_LIGHT_PIN_HIGH;
 	ambient_light.value = (double(analogRead(AMBIENT_LIGHT_PIN_HIGH))/AMBIENT_LIGHT_MAX_ADC) * 100;
+	data->write((uint8_t*)&ambient_light, sizeof(record_t));
 	debug->print("\t");
 	debug->println(ambient_light.value);
-	data->write((uint8_t*)&ambient_light, sizeof(record_t));
+
+
 }
 
 void log_sound()
@@ -377,7 +380,7 @@ void log_sound()
 	debug->print("\tMax: ");
 	debug->println(max);
 
-	sound.value = max - min;
+	sound.value = double(max - min)/1024 * ADC_REFERENCE_VOLTAGE;
 	debug->print("\tPeak to Peak: ");
 	debug->println(sound.value);
 
