@@ -16,12 +16,11 @@
 #ifndef _DROLoggerBoard_H_
 #define _DROLoggerBoard_H_
 
-//#define ONE_WIRE_BUS_TWO_PIN 13
-#define ONE_WIRE_BUS_ONE_PIN 3
 
-#define RGP_R 11
-#define RGP_G 10
-#define RGP_B 9
+
+#define RBG_R 11
+#define RBG_G 10
+#define RBG_B 9
 
 #define DEBUG_RX_PIN 7
 #define DEBUG_TX_PIN 6
@@ -29,6 +28,7 @@
 #define POWERBEE_CONTROL_PIN  5
 #define POWER_CONTROL_PIN     4
 #define CLOCK_INT_PIN         2
+#define ONE_WIRE_BUS_ONE_PIN  3
 
 
 #define HUMIDITY_PIN A0
@@ -37,6 +37,11 @@
 #define SOUND_SENSOR A3
 #define CHARGE_STATUS A6
 #define BATERY_VOLTAGE A7
+
+
+#define HUMIDITY_REFERENCE_VOLTAGE 3.3d
+#define AMBIENT_LIGHT_MAX_ADC 775
+#define SOUND_SAMPLE_PERIOD 2000
 
 
 #endif

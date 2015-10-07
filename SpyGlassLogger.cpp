@@ -30,6 +30,7 @@ record_t end_delim;
 uint8_t retry_count = 0;
 boolean sleep = false;
 boolean did_backup_sleep = false;
+double temperature = NAN;
 
 
 void setup()
@@ -68,6 +69,10 @@ void setup()
 	RTC.set33kHzOutput(false);
 	RTC.clearAlarmFlag(3);
 	RTC.setSQIMode(sqiModeAlarm1);
+
+	pinMode(RBG_R, OUTPUT);
+	pinMode(RBG_G, OUTPUT);
+	pinMode(RBG_B, OUTPUT);
 }
 
 void loop()
@@ -77,7 +82,7 @@ void loop()
 	power_up_radio();
 	power_up_devices();
 	clear_input();
-
+	temperature = NAN;
 	if(!repeat(&do_logging, 5, 100))
 	{
 		debug->println("Failed to send data.");
@@ -196,10 +201,13 @@ bool do_logging(int repeat_count)
 		debug->println(i);
 		log_bus(i);
 	}
+
+	digitalWrite(RBG_B, HIGH);
 	for(size_t i = 0; i < (sizeof(loggers)/2); i++)
 	{
 		loggers[i]();
 	}
+	digitalWrite(RBG_B, LOW);
 
 	debug->print("Temperature Count: ");
 	debug->println(upload.temperature_count);
@@ -266,9 +274,17 @@ void log_temperature(uint8_t bus, uint8_t *address)
 	log_address(debug, address);
 	debug->print(' ');
 	debug->println(record.value);
+	temperature = record.value;
 
 	upload.temperature_count++;
 }
+
+//def caculate_humidity(temp, voltage):
+//        vOut = float(voltage)
+//        T = float(temp)
+//        sensorRH = ((vOut/base_voltage) - 0.1515)/0.00636
+//        trueRH = sensorRH/(1.0546 - (0.00216 * T))
+//        return trueRH
 
 void log_humidity()
 {
@@ -280,7 +296,24 @@ void log_humidity()
 
 	pinMode(HUMIDITY_PIN, INPUT);
 	humidity.value = analogRead(HUMIDITY_PIN);
-	data->write((uint8_t*)&humidity, sizeof(record_t));
+	debug->print("\tADC: ");
+	debug->println(humidity.value);
+	double voltage = (double(humidity.value) / 1024) * HUMIDITY_REFERENCE_VOLTAGE;
+	debug->print("\tVoltage: ");
+	debug->println(voltage);
+	if(temperature != NAN)
+	{
+		double sensorRH = ((voltage/HUMIDITY_REFERENCE_VOLTAGE) - 0.1515)/0.00636;
+		debug->print("\tSensor RH: ");
+		debug->println(sensorRH);
+		humidity.value = sensorRH/(1.0546 - (0.00216 * temperature));
+		debug->print("\tTrue RH: ");
+		debug->println(humidity.value);
+		data->write((uint8_t*)&humidity, sizeof(record_t));
+	}else
+	{
+		debug->println("No Temperature set. Cannot calculate relative Humidity.");
+	}
 
 }
 
@@ -290,10 +323,17 @@ void log_ambient_light()
 	record_t ambient_light;
 	memset(ambient_light.address, 0, 8);
 	ambient_light.record_type = RECORD_ADC;
-	ambient_light.address[0] = AMBIENT_LIGHT_PIN_LOW;
 
+	ambient_light.address[0] = AMBIENT_LIGHT_PIN_LOW;
 	pinMode(AMBIENT_LIGHT_PIN_LOW, INPUT);
-	ambient_light.value = analogRead(AMBIENT_LIGHT_PIN_LOW);
+	ambient_light.value = (double(analogRead(AMBIENT_LIGHT_PIN_LOW))/AMBIENT_LIGHT_MAX_ADC) * 100;
+	data->write((uint8_t*)&ambient_light, sizeof(record_t));
+	debug->print("\t");
+	debug->println(ambient_light.value);
+
+	ambient_light.value = (double(analogRead(AMBIENT_LIGHT_PIN_HIGH))/AMBIENT_LIGHT_MAX_ADC) * 100;
+	debug->print("\t");
+	debug->println(ambient_light.value);
 	data->write((uint8_t*)&ambient_light, sizeof(record_t));
 }
 
@@ -306,7 +346,41 @@ void log_sound()
 	sound.address[0] = SOUND_SENSOR;
 
 	pinMode(SOUND_SENSOR, INPUT);
-	sound.value = analogRead(SOUND_SENSOR);
+
+
+	uint16_t adc = analogRead(SOUND_SENSOR);
+	uint16_t min = adc;
+	uint16_t max = adc;
+
+	uint64_t start = millis();
+
+	while(millis() - start < SOUND_SAMPLE_PERIOD)
+	{
+		adc = analogRead(SOUND_SENSOR);
+		if(adc > max)
+		{
+			max = adc;
+		}
+		if(adc < min)
+		{
+			min = adc;
+		}
+//		debug->print(adc);
+//		debug->print(" ");
+//		debug->println((double(adc)/1024) * 255);
+		analogWrite(RBG_B, (double(adc)/1024) * 255);
+	}
+	digitalWrite(RBG_B, LOW);
+	debug->print("\tMin: ");
+	debug->println(min);
+
+	debug->print("\tMax: ");
+	debug->println(max);
+
+	sound.value = max - min;
+	debug->print("\tPeak to Peak: ");
+	debug->println(sound.value);
+
 	data->write((uint8_t*)&sound, sizeof(record_t));
 }
 
@@ -319,7 +393,12 @@ void log_battery_voltage()
 	memset(battery.address, 0, 8);
 	battery.record_type = RECORD_ADC;
 	battery.address[0] = BATERY_VOLTAGE;
-	battery.value = analogRead(BATERY_VOLTAGE) * (1.1 / 1024)* (10+2)/2;
+	uint16_t adc = analogRead(BATERY_VOLTAGE);
+	debug->print("\tADC: ");
+	debug->println(adc);
+	battery.value = adc * (double(1.1) / 1024) * double(10+2)/2;
+	debug->print("\t");
+	debug->println(battery.value);
 	data->write((uint8_t*)&battery, sizeof(record_t));
 }
 
