@@ -17,7 +17,7 @@
 #define _DROLoggerBoard_H_
 
 //#define ONE_WIRE_BUS_TWO_PIN 13
-#define ONE_WIRE_BUS_ONE_PIN 12
+#define ONE_WIRE_BUS_ONE_PIN 3
 
 #define RGP_R 11
 #define RGP_G 10
