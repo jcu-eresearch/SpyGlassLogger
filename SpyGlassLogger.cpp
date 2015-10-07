@@ -19,8 +19,9 @@
 OneWire* busses[ONEWIRE_BUS_COUNT];
 DallasTemperature* temps[ONEWIRE_BUS_COUNT];
 
-SoftwareSerial* debug;
+Stream* debug;
 Stream* data;
+SoftwareSerial *uart;
 
 upload_t upload;
 record_t start_delim;
@@ -42,9 +43,14 @@ void setup()
 	}
 	Serial.begin(9600);
 	data = &Serial;
-	debug = new SoftwareSerial(DEBUG_RX_PIN, DEBUG_TX_PIN);
-	debug->begin(9600);
+
+	uart = new SoftwareSerial(DEBUG_RX_PIN, DEBUG_TX_PIN);
+	uart->begin(9600);
+
+	debug = uart;
 	debug->println("Starting...");
+
+
 	busses[0] = new OneWire(ONE_WIRE_BUS_ONE_PIN);
 	temps[0] = new DallasTemperature(busses[0]);
 	debug->println(freeRam());
